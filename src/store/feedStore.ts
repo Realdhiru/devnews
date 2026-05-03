@@ -125,17 +125,18 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
       });
       get().saveToCache(fetchedArticles);
     } catch (e: any) {
-      let filteredDemo = DEMO_DATA;
-      const { activeFilter, searchQuery } = get();
-      if (activeFilter) {
-        filteredDemo = filteredDemo.filter(a => a.categories.includes(activeFilter));
+    const { searchQuery, articles } = get();
+    if (articles.length > 0) {
+        // Already have articles showing — don't replace them
+        set({ isLoading: false, error: null });
+    } else if (!searchQuery) {
+        // No search active and no articles — show demo
+        set({ articles: DEMO_DATA, availableFilters: ["Web Dev", "Security", "Open Source"] });
+        set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
+    } else {
+        // Search failed — show empty state with message, not demo data
+        set({ articles: [], isLoading: false, error: 'Search unavailable — backend offline' });
       }
-      if (searchQuery) {
-        const lowerSearch = searchQuery.toLowerCase();
-        filteredDemo = filteredDemo.filter(a => a.title.toLowerCase().includes(lowerSearch) || a.summary_short.toLowerCase().includes(lowerSearch));
-      }
-      set({ articles: filteredDemo, availableFilters: ["Web Dev", "Security", "Open Source"] });
-      set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
     }
   },
 
