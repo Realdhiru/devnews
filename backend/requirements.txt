@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0+cpu
 fastapi==0.111.0
 uvicorn==0.29.0
 apscheduler==3.10.4
@@ -11,5 +13,4 @@ python-dotenv==1.0.1
 pydantic==2.7.1
 libsql-experimental==0.0.55
 pyyaml==6.0.1
-numpy==1.26.4
 python-dateutil==2.9.0
