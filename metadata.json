@@ -1,0 +1,6 @@
+{
+  "name": "DevNews",
+  "description": "A curated developer news aggregator with real-time updates and infinite scroll.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

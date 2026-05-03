@@ -1,0 +1,10 @@
+name: Deploy Checks
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simple syntax check
+        run: python -m py_compile backend/main.py

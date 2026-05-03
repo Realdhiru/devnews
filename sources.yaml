@@ -1,0 +1,126 @@
+sources:
+  - name: "HackerNews"
+    url: "https://hnrss.org/frontpage"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 30
+    enabled: true
+
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "Ars Technica"
+    url: "https://feeds.arstechnica.com/arstechnica/index"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "The Verge"
+    url: "https://www.theverge.com/rss/index.xml"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "DEV.to"
+    url: "https://dev.to/feed"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 120
+    enabled: true
+
+  - name: "Smashing Magazine"
+    url: "https://www.smashingmagazine.com/feed/"
+    type: "rss"
+    category: "Web Dev"
+    interval_minutes: 360
+    enabled: true
+
+  - name: "InfoQ"
+    url: "https://feed.infoq.com/"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 120
+    enabled: true
+
+  - name: "The New Stack"
+    url: "https://thenewstack.io/feed/"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 180
+    enabled: true
+
+  - name: "ZDNet"
+    url: "https://www.zdnet.com/news/rss.xml"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 120
+    enabled: true
+
+  - name: "GitHub Blog"
+    url: "https://github.blog/feed/"
+    type: "rss"
+    category: "Open Source"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "KrebsOnSecurity"
+    url: "https://krebsonsecurity.com/feed/"
+    type: "rss"
+    category: "Security"
+    interval_minutes: 30
+    enabled: true
+
+  - name: "CVEfeed High"
+    url: "https://cvefeed.io/rssfeed/severity/high.xml"
+    type: "rss"
+    category: "Security"
+    interval_minutes: 30
+    enabled: true
+
+  - name: "MLH Events"
+    url: "https://mlh.io/seasons/2025/events.rss"
+    type: "rss"
+    category: "Events"
+    interval_minutes: 240
+    enabled: true
+
+  - name: "r/programming"
+    url: "https://reddit.com/r/programming/.rss"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 30
+    enabled: true
+
+  - name: "r/netsec"
+    url: "https://reddit.com/r/netsec/.rss"
+    type: "rss"
+    category: "Security"
+    interval_minutes: 30
+    enabled: true
+
+  - name: "r/gsoc"
+    url: "https://reddit.com/r/gsoc/.rss"
+    type: "rss"
+    category: "Open Source"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "r/opensource"
+    url: "https://reddit.com/r/opensource/.rss"
+    type: "rss"
+    category: "Open Source"
+    interval_minutes: 60
+    enabled: true
+
+  - name: "GSoC"
+    url: "https://summerofcode.withgoogle.com/programs"
+    type: "html"
+    category: "Open Source"
+    interval_minutes: 1440
+    enabled: true
