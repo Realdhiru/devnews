@@ -1,18 +1,20 @@
 KEYWORD_MAP = {
-    "security": ["cve", "vulnerability", "exploit", "breach", "zero-day", "ransomware", "malware", "patch", "hack", "cybersecurity"],
-    "ai": ["ai", "machine learning", "llm", "neural", "gpt", "claude", "gemini", "artificial intelligence", "deep learning", "transformer"],
-    "linux": ["linux", "kernel", "ubuntu", "arch", "debian", "fedora", "systemd"],
+    "security": ["cve", "vulnerability", "exploit", "breach", "zero-day", "ransomware", "malware", "patch", "hack", "cybersecurity", "security", "threat"],
+    "ai": ["ai", "machine learning", "llm", "neural", "gpt", "claude", "gemini", "artificial intelligence", "deep learning", "transformer", "diffusion"],
+    "linux": ["linux", "kernel", "ubuntu", "arch", "debian", "fedora", "systemd", "gnome", "kde"],
+    "engineering": ["architecture", "backend", "performance", "database", "database", "distributed systems", "scaling", "optimization", "rust", "golang", "systems programming"],
     "hackathon": ["hackathon", "contest", "competition", "prize", "devfolio", "unstop", "mlh"],
-    "open_source": ["open source", "github", "repository", "contributor", "gsoc", "lfx", "outreachy", "maintainer"],
-    "webdev": ["javascript", "typescript", "react", "vue", "css", "frontend", "nodejs", "nextjs"],
-    "devops": ["docker", "kubernetes", "ci/cd", "deployment", "cloud", "aws", "devops"],
+    "open_source": ["open source", "github", "repository", "contributor", "gsoc", "lfx", "outreachy", "maintainer", "foss"],
+    "webdev": ["javascript", "typescript", "react", "vue", "css", "frontend", "nodejs", "nextjs", "web dev", "browser"],
+    "devops": ["docker", "kubernetes", "ci/cd", "deployment", "cloud", "aws", "devops", "terraform", "ansible"],
     "events": ["conference", "meetup", "summit", "workshop", "webinar", "talk", "luma"]
 }
 
-CATEGORY_PRIORITY = ["security", "hackathon", "open_source", "ai", "linux", "webdev", "devops", "events"]
+CATEGORY_PRIORITY = ["security", "engineering", "hackathon", "open_source", "ai", "linux", "webdev", "devops", "events"]
 
 CATEGORY_DISPLAY_MAP = {
     "security": "Security",
+    "engineering": "Engineering",
     "hackathon": "Events",
     "open_source": "Open Source",
     "ai": "AI",
@@ -21,7 +23,7 @@ CATEGORY_DISPLAY_MAP = {
     "devops": "DevOps",
     "events": "Events",
     "tech": "Tech",
-    "general": "General"
+    "general": "Other"
 }
 
 def generate_tags(title: str, summary: str) -> dict:

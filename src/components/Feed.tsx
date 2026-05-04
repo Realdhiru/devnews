@@ -11,64 +11,70 @@ export const Feed: React.FC = () => {
 
   const showSkeletons = isLoading && !isCached && articles.length === 0;
 
-  // Group articles into columns manually to isolate expansion
-  const col1 = articles.filter((_, i) => i % 3 === 0);
-  const col2 = articles.filter((_, i) => i % 3 === 1);
-  const col3 = articles.filter((_, i) => i % 3 === 2);
+  // To maintain vertical isolation, we need to distribute items into columns.
+  // For simplicity and total stability, we'll use 3 column containers.
+  // On mobile (<768px): 1 column (all articles)
+  // On tablet (>=768px && <1024px): 2 columns (even/odd)
+  // On desktop (>=1024px): 3 columns (0, 1, 2 distribution)
+  
+  const col1_3 = articles.filter((_, i) => i % 3 === 0);
+  const col2_3 = articles.filter((_, i) => i % 3 === 1);
+  const col3_3 = articles.filter((_, i) => i % 3 === 2);
 
-  const renderColumn = (colArticles: typeof articles) => (
-    <div className="flex flex-col gap-6">
-      {colArticles.map((article) => (
-        <Card 
-          key={article.id}
-          card={article} 
-          isExpanded={expandedCardId === article.id} 
-          onToggle={() => toggleCard(article.id)} 
-        />
-      ))}
-    </div>
-  );
+  const col1_2 = articles.filter((_, i) => i % 2 === 0);
+  const col2_2 = articles.filter((_, i) => i % 2 === 1);
 
   return (
-    <div className="max-w-7xl mx-auto pb-20 min-h-screen bg-[#0a0a0a] w-full pt-8">
-      <div className="px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+    <div className="max-w-7xl mx-auto pb-20 min-h-screen bg-[#0a0a0a] w-full pt-20 md:pt-8">
+      {/* Mobile Feed: Single Column */}
+      <div className="px-4 md:hidden flex flex-col gap-6">
+        {showSkeletons ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : articles.map(a => (
+          <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />
+        ))}
+      </div>
+
+      {/* Tablet Feed: 2 Columns */}
+      <div className="px-8 hidden md:grid lg:hidden grid-cols-2 gap-6 items-start">
         {showSkeletons ? (
           <>
             <div className="flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
-            <div className="hidden md:flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
-            <div className="hidden lg:flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
+            <div className="flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
           </>
         ) : (
           <>
-            {/* On mobile (default), show all articles in one column but distributed into col1 for grouping stability if needed. 
-                Wait, if I use grid-cols-1, then col2 and col3 are hidden. That's bad. 
-                I need to handle the distribution differently based on the number of columns.
-            */}
             <div className="flex flex-col gap-6">
-               {[...col1, ...col2, ...col3].sort((a,b) => articles.indexOf(a) - articles.indexOf(b)).map(article => (
-                  <div key={article.id} className="md:hidden">
-                    <Card card={article} isExpanded={expandedCardId === article.id} onToggle={() => toggleCard(article.id)} />
-                  </div>
-               ))}
-               {col1.map(article => (
-                  <div key={article.id} className="hidden md:block">
-                    <Card card={article} isExpanded={expandedCardId === article.id} onToggle={() => toggleCard(article.id)} />
-                  </div>
-               ))}
+              {col1_2.map(a => <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />)}
             </div>
-            <div className="hidden md:flex flex-col gap-6">
-               {col2.map(article => (
-                  <div key={article.id}>
-                    <Card card={article} isExpanded={expandedCardId === article.id} onToggle={() => toggleCard(article.id)} />
-                  </div>
-               ))}
+            <div className="flex flex-col gap-6">
+              {col2_2.map(a => <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />)}
             </div>
-            <div className="hidden lg:flex flex-col gap-6">
-               {col3.map(article => (
-                  <div key={article.id}>
-                    <Card card={article} isExpanded={expandedCardId === article.id} onToggle={() => toggleCard(article.id)} />
-                  </div>
-               ))}
+          </>
+        )}
+      </div>
+
+      {/* Desktop Feed: 3 Columns */}
+      <div className="px-8 hidden lg:grid grid-cols-3 gap-6 items-start">
+        {showSkeletons ? (
+          <>
+            <div className="flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
+            <div className="flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
+            <div className="flex flex-col gap-6"><SkeletonCard /><SkeletonCard /></div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-6">
+              {col1_3.map(a => <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />)}
+            </div>
+            <div className="flex flex-col gap-6">
+              {col2_3.map(a => <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />)}
+            </div>
+            <div className="flex flex-col gap-6">
+              {col3_3.map(a => <Card key={a.id} card={a} isExpanded={expandedCardId === a.id} onToggle={() => toggleCard(a.id)} />)}
             </div>
           </>
         )}

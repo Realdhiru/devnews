@@ -14,15 +14,25 @@ def normalize_article(raw: dict, scraped_at: str) -> dict:
         
     summary = raw.get('summary', '')
     
-    # Reddit cleanup
+    import re
+    # 1. Reddit cleanup
     if "submitted by /u/" in summary:
-        # Strip common reddit meta footer
         if " [link] " in summary:
             summary = summary.split(" [link] ")[0]
         if "submitted by /u/" in summary:
             summary = summary.split("submitted by /u/")[0]
             
-    summary = bleach.clean(summary, tags=[], strip=True).strip()[:500]
+    # 2. Re-clean HTML
+    summary = bleach.clean(summary, tags=[], strip=True)
+    
+    # 3. Strip URLs
+    summary = re.sub(r'https?://\S+', '', summary)
+    
+    summary = summary.strip()[:400]
+    
+    # Fallback
+    if not summary or summary.isspace():
+        summary = "Story published. See sources for details."
     
     url = raw.get('link', '')
     if not url:

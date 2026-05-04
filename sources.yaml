@@ -31,7 +31,7 @@ sources:
     url: "https://dev.to/feed"
     type: "rss"
     category: "Tech"
-    interval_minutes: 120
+    interval_minutes: 480
     enabled: true
 
   - name: "Smashing Magazine"
@@ -52,7 +52,7 @@ sources:
     url: "https://thenewstack.io/feed/"
     type: "rss"
     category: "Tech"
-    interval_minutes: 180
+    interval_minutes: 360
     enabled: true
 
   - name: "ZDNet"
@@ -116,6 +116,27 @@ sources:
     type: "rss"
     category: "Open Source"
     interval_minutes: 60
+    enabled: true
+
+  - name: "Wired Tech"
+    url: "https://www.wired.com/feed/category/business/latest/rss"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 120
+    enabled: true
+
+  - name: "AWS News"
+    url: "https://aws.amazon.com/about-aws/whats-new/recent/feed/"
+    type: "rss"
+    category: "Dev"
+    interval_minutes: 180
+    enabled: true
+
+  - name: "IEEE Spectrum"
+    url: "https://spectrum.ieee.org/rss/blog/tech-talk/fulltext"
+    type: "rss"
+    category: "Tech"
+    interval_minutes: 360
     enabled: true
 
   - name: "GSoC"

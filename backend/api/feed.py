@@ -49,7 +49,7 @@ def get_articles(
             FROM grouped_stories g
             JOIN articles a ON g.root_article_id = a.id
         """
-        where_clauses.append("(LOWER(a.title) LIKE ? OR LOWER(a.summary) LIKE ?)")
+        where_clauses.append("(LOWER(a.title) LIKE ? OR LOWER(COALESCE(a.summary, '')) LIKE ?)")
         params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
     else:
         query = """
@@ -85,11 +85,39 @@ def get_articles(
             src_cur = conn.execute("SELECT source_name, source_url, favicon_url FROM article_sources WHERE group_id = ?", (g_id,))
             sources = [ArticleSource(name=s[0], url=s[1], favicon_url=s[2] or "") for s in src_cur.fetchall()]
             
+            summary = row[7] or ""
+            # Runtime cleanup for messy summaries
+            import re
+            
+            # 1. Remove Reddit junk
+            if "submitted by /u/" in summary:
+                if " [link] " in summary:
+                    summary = summary.split(" [link] ")[0]
+                if "submitted by /u/" in summary:
+                    summary = summary.split("submitted by /u/")[0]
+            
+            # 2. Re-clean HTML just in case
+            summary = re.sub(r'<[^>]+>', '', summary)
+            
+            # 3. Strip long URLs (often just appended as text in RSS)
+            summary = re.sub(r'https?://\S+', '', summary)
+            
+            # 4. Clean up whitespace and non-essential text
+            summary = summary.strip()
+            
+            # 5. Cap it if it's still too long
+            if len(summary) > 400:
+                summary = summary[:397] + "..."
+            
+            # 6. Fallback for empty summaries
+            if not summary or summary.isspace():
+                summary = "Click to read the full story from sources."
+
             articles.append(ArticleCard(
                 id=g_id,
                 title=row[6],
-                summary_short=row[7],
-                summary_full=row[7],
+                summary_short=summary,
+                summary_full=summary,
                 published_at=row[2],
                 source_count=row[5],
                 sources=sources,

@@ -125,18 +125,17 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
       });
       get().saveToCache(fetchedArticles);
     } catch (e: any) {
-    const { searchQuery, articles } = get();
-    if (articles.length > 0) {
-        // Already have articles showing — don't replace them
-        set({ isLoading: false, error: null });
-    } else if (!searchQuery) {
-        // No search active and no articles — show demo
-        set({ articles: DEMO_DATA, availableFilters: ["Web Dev", "Security", "Open Source"] });
-        set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
-    } else {
-        // Search failed — show empty state with message, not demo data
-        set({ articles: [], isLoading: false, error: 'Search unavailable — backend offline' });
+      let filteredDemo = DEMO_DATA;
+      const { activeFilter, searchQuery } = get();
+      if (activeFilter) {
+        filteredDemo = filteredDemo.filter(a => a.categories.includes(activeFilter));
       }
+      if (searchQuery) {
+        const lowerSearch = searchQuery.toLowerCase();
+        filteredDemo = filteredDemo.filter(a => a.title.toLowerCase().includes(lowerSearch) || a.summary_short.toLowerCase().includes(lowerSearch));
+      }
+      set({ articles: filteredDemo, availableFilters: ["Web Dev", "Security", "Open Source"] });
+      set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
     }
   },
 
@@ -188,6 +187,17 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
       const cached = localStorage.getItem('devfeed_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
+        
+        // Cache expiration check: 1 hour (3600000 ms)
+        const ONE_HOUR = 3600000;
+        const now = new Date().getTime();
+        const cachedTime = parsed.timestamp ? new Date(parsed.timestamp).getTime() : 0;
+        
+        if (now - cachedTime > ONE_HOUR) {
+          localStorage.removeItem('devfeed_cache');
+          return;
+        }
+
         if (parsed.feed_data && parsed.feed_data.length > 0) {
           const UNWANTED_FILTERS = ["React", "Tech", "web dev", "Web Dev", "General", "GitHub Trending"];
           const rawFilters = Array.from(new Set(parsed.feed_data.flatMap((a: ArticleCard) => a.categories))) as string[];

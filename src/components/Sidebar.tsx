@@ -85,10 +85,10 @@ export const Sidebar: React.FC = () => {
       `}>
         {!isCollapsed && (
           <>
-            <div className="w-full px-4 pt-10 pb-8 flex flex-col items-center border-b border-white/[0.04] mb-4">
-              <div className="flex items-center justify-center w-full relative">
+            <div className="w-full pt-12 pb-10 flex flex-col items-center border-b border-white/[0.04] mb-6">
+              <div className="relative flex items-center justify-center w-full px-4">
                 <h1 
-                  className="text-2xl md:text-3xl font-black italic tracking-tighter text-gray-100 uppercase cursor-pointer hover:scale-105 transition-all duration-300 transform-gpu active:scale-95"
+                  className="text-3xl font-black italic tracking-tighter text-gray-100 uppercase cursor-pointer hover:scale-105 transition-all duration-300 transform-gpu active:scale-95 text-center w-full"
                   style={{ fontFamily: 'Times New Roman' }}
                   onClick={() => { 
                     setLocalQuery('');
@@ -98,8 +98,8 @@ export const Sidebar: React.FC = () => {
                 >
                   DevNews<span className="text-blue-500">.</span>
                 </h1>
-                <button className="md:hidden absolute -right-0 p-2 text-gray-400 hover:text-gray-200 transition-colors" onClick={() => setIsOpen(false)}>
-                   <X size={20} />
+                <button className="md:hidden absolute right-4 p-2 text-gray-400 hover:text-gray-200 transition-colors" onClick={() => setIsOpen(false)}>
+                   <X size={24} />
                 </button>
               </div>
             </div>
