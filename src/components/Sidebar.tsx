@@ -110,7 +110,7 @@ export const Sidebar: React.FC = () => {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder={isMobile ? "Search..." : "Search... (press /)"}
+                  placeholder="Search"
                   value={localQuery}
                   onChange={(e) => setLocalQuery(e.target.value)}
                   className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg pl-9 pr-8 py-2 text-[13px] text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/[0.12] transition-all font-mono"

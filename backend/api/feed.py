@@ -103,6 +103,7 @@ def get_articles(
             summary = re.sub(r'https?://\S+', '', summary)
             
             # 4. Clean up whitespace and non-essential text
+            summary = re.sub(r'\s+', ' ', summary)
             summary = summary.strip()
             
             # 5. Cap it if it's still too long

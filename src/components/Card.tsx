@@ -76,7 +76,7 @@ export const Card: React.FC<CardProps> = ({ card, isExpanded, onToggle }) => {
       {(isExpanded ? card.summary_full : card.summary_short) ? (
         <div className="mt-5">
           <div 
-            className={`text-[15px] md:text-[16px] text-gray-400 leading-relaxed break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2 overflow-hidden' : ''}`}
+            className={`text-[15px] md:text-[16px] text-gray-400 leading-relaxed break-words ${!isExpanded ? 'line-clamp-2 overflow-hidden' : ''}`}
             style={{ 
               fontFamily: 'Inter, system-ui, sans-serif',
               fontStyle: 'italic',

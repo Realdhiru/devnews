@@ -1,80 +1,136 @@
+import urllib.parse
+from fastapi import APIRouter, Query
+from backend.database import get_db
+from backend.models import FeedResponse, ArticleCard, ArticleSource
+from backend.cache import TTLCache
+import base64
+import json
 import hashlib
-from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
-import bleach
-from dateutil.parser import parse as parse_date
-import time
-from datetime import datetime, timezone
 
-def normalize_article(raw: dict, scraped_at: str) -> dict:
-    title = raw.get('title', '')
-    title = bleach.clean(title, tags=[], strip=True).strip()[:300]
-    
-    if not title:
-        return None
-        
-    summary = raw.get('summary', '')
-    
-    import re
-    # 1. Reddit cleanup
-    if "submitted by /u/" in summary:
-        if " [link] " in summary:
-            summary = summary.split(" [link] ")[0]
-        if "submitted by /u/" in summary:
-            summary = summary.split("submitted by /u/")[0]
-            
-    # 2. Re-clean HTML
-    summary = bleach.clean(summary, tags=[], strip=True)
-    
-    # 3. Strip URLs
-    summary = re.sub(r'https?://\S+', '', summary)
-    
-    summary = summary.strip()[:400]
-    
-    # Fallback
-    if not summary or summary.isspace():
-        summary = "Story published. See sources for details."
-    
-    url = raw.get('link', '')
-    if not url:
-        return None
-        
-    try:
-        parsed = urlparse(url)
-        # remove utm params
-        query = parse_qs(parsed.query)
-        query = {k: v for k, v in query.items() if not k.startswith('utm_')}
-        clean_query = urlencode(query, doseq=True)
-        # normalize
-        netloc = parsed.netloc.lower()
-        path = parsed.path.rstrip('/')
-        url = urlunparse((parsed.scheme, netloc, path, parsed.params, clean_query, ''))
-    except:
-        return None
-        
-    url_hash = hashlib.sha256(url.encode()).hexdigest()
-    
-    pub_date_str = raw.get('published', scraped_at)
-    try:
-        dt = parse_date(pub_date_str)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        else:
-            dt = dt.astimezone(timezone.utc)
-        
-        now = datetime.now(timezone.utc)
-        if dt > now:
-            dt = now
-            
-        published_at = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-    except:
-        published_at = scraped_at
+router = APIRouter()
+cache = TTLCache(300)
 
-    return {
-        "title": title,
-        "summary": summary,
-        "original_url": url,
-        "url_hash": url_hash,
-        "source_name": raw.get('source_name', 'Unknown'),
-        "published_at": published_at,
-        "scraped_at": scraped_at
-    }
+def encode_cursor(published_at, doc_id):
+    raw = f"{published_at}|{doc_id}"
+    return base64.b64encode(raw.encode()).decode()
+
+def decode_cursor(cursor):
+    if not cursor:
+        return None, None
+    try:
+        raw = base64.b64decode(cursor.encode()).decode()
+        timestamp, doc_id = raw.rsplit("|", 1)
+        return timestamp, int(doc_id)
+    except:
+        return None, None
+
+@router.get("/articles", response_model=FeedResponse)
+def get_articles(
+    cursor: str = None, 
+    limit: int = Query(20, le=50), 
+    filter: str = None, 
+    search: str = Query(None, max_length=100)
+):
+    cache_key = hashlib.md5(f"{cursor}-{limit}-{filter}-{search}".encode()).hexdigest()
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    conn = get_db()
+    ts, c_id = decode_cursor(cursor)
+    
+    params = []
+    where_clauses = []
+    
+    if search:
+        query = """
+            SELECT g.id, g.root_article_id, g.published_at, g.primary_category, g.categories, g.source_count,
+                   a.title, a.summary
+            FROM grouped_stories g
+            JOIN articles a ON g.root_article_id = a.id
+        """
+        where_clauses.append("(LOWER(a.title) LIKE ? OR LOWER(COALESCE(a.summary, '')) LIKE ?)")
+        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
+    else:
+        query = """
+            SELECT g.id, g.root_article_id, g.published_at, g.primary_category, g.categories, g.source_count,
+                   a.title, a.summary
+            FROM grouped_stories g
+            JOIN articles a ON g.root_article_id = a.id
+        """
+        
+    if filter:
+        where_clauses.append("(g.primary_category = ? OR g.categories LIKE ?)")
+        params.extend([filter, f'%"{filter}"%'])
+        
+    if ts and c_id:
+        where_clauses.append("(g.published_at < ? OR (g.published_at = ? AND g.id < ?))")
+        params.extend([ts, ts, c_id])
+        
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+        
+    query += " ORDER BY g.published_at DESC, g.id DESC LIMIT ?"
+    params.append(limit)
+    
+    try:
+        cursor_db = conn.execute(query, tuple(params))
+        rows = cursor_db.fetchall()
+        
+        articles = []
+        for row in rows:
+            g_id = row[0]
+            cat_list = json.loads(row[4]) if row[4] else []
+            
+            src_cur = conn.execute("SELECT source_name, source_url, favicon_url FROM article_sources WHERE group_id = ?", (g_id,))
+            sources = [ArticleSource(name=s[0], url=s[1], favicon_url=s[2] or "") for s in src_cur.fetchall()]
+            
+            summary = row[7] or ""
+            # Runtime cleanup for messy summaries
+            import re
+            
+            # 1. Remove Reddit junk
+            if "submitted by /u/" in summary:
+                if " [link] " in summary:
+                    summary = summary.split(" [link] ")[0]
+                if "submitted by /u/" in summary:
+                    summary = summary.split("submitted by /u/")[0]
+            
+            # 2. Re-clean HTML just in case
+            summary = re.sub(r'<[^>]+>', '', summary)
+            
+            # 3. Strip long URLs (often just appended as text in RSS)
+            summary = re.sub(r'https?://\S+', '', summary)
+            
+            # 4. Clean up whitespace and non-essential text
+            summary = re.sub(r'\s+', ' ', summary)
+            summary = summary.strip()
+            
+            # 5. Cap it if it's still too long
+            if len(summary) > 400:
+                summary = summary[:397] + "..."
+            
+            # 6. Fallback for empty summaries
+            if not summary or summary.isspace():
+                summary = "Click to read the full story from sources."
+
+            articles.append(ArticleCard(
+                id=g_id,
+                title=row[6],
+                summary_short=summary,
+                summary_full=summary,
+                published_at=row[2],
+                source_count=row[5],
+                sources=sources,
+                categories=cat_list
+            ))
+            
+        has_more = len(articles) == limit
+        next_cursor = encode_cursor(articles[-1].published_at, articles[-1].id) if articles else None
+        
+        resp = dict(articles=articles, next_cursor=next_cursor, has_more=has_more)
+        cache.set(cache_key, resp)
+        return resp
+        
+    finally:
+        conn.close()
