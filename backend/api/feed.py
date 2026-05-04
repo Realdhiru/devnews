@@ -96,23 +96,32 @@ def get_articles(
                 if "submitted by /u/" in summary:
                     summary = summary.split("submitted by /u/")[0]
             
-            # 2. Re-clean HTML just in case
-            summary = re.sub(r'<[^>]+>', '', summary)
+            # 2. Remove Hacker News / RSS metadata junk
+            junk_patterns = [
+                r'Article URL:.*$',
+                r'Comments URL:.*$',
+                r'Points: \d+.*$',
+                r'# Comments: \d+.*$',
+                r'\[link\].*$',
+                r'\[comments\].*$'
+            ]
+            for pattern in junk_patterns:
+                summary = re.sub(pattern, '', summary, flags=re.IGNORECASE | re.MULTILINE)
             
-            # 3. Strip long URLs (often just appended as text in RSS)
+            # 3. Clean HTML and URLs
+            summary = re.sub(r'<[^>]+>', '', summary)
             summary = re.sub(r'https?://\S+', '', summary)
             
-            # 4. Clean up whitespace and non-essential text
+            # 4. Normalize whitespace
             summary = re.sub(r'\s+', ' ', summary)
             summary = summary.strip()
             
-            # 5. Cap it if it's still too long
+            # 5. Cap and fallback
             if len(summary) > 400:
                 summary = summary[:397] + "..."
             
-            # 6. Fallback for empty summaries
-            if not summary or summary.isspace():
-                summary = "Click to read the full story from sources."
+            if not summary or summary.isspace() or len(summary) < 5:
+                summary = "Detailed story available at the source links below."
 
             articles.append(ArticleCard(
                 id=g_id,

@@ -184,20 +184,11 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
 
   loadFromCache: () => {
     try {
+      // Initial cache load for instant visibility
       const cached = localStorage.getItem('devfeed_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
         
-        // Cache expiration check: 1 hour (3600000 ms)
-        const ONE_HOUR = 3600000;
-        const now = new Date().getTime();
-        const cachedTime = parsed.timestamp ? new Date(parsed.timestamp).getTime() : 0;
-        
-        if (now - cachedTime > ONE_HOUR) {
-          localStorage.removeItem('devfeed_cache');
-          return;
-        }
-
         if (parsed.feed_data && parsed.feed_data.length > 0) {
           const UNWANTED_FILTERS = ["React", "Tech", "web dev", "Web Dev", "General", "GitHub Trending"];
           const rawFilters = Array.from(new Set(parsed.feed_data.flatMap((a: ArticleCard) => a.categories))) as string[];
@@ -213,12 +204,16 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
             isCached: true,
             cachedAt: parsed.timestamp || null,
             availableFilters: newFilters,
-            isLoading: false
           });
         }
       }
+
+      // Important: Always refresh from network on page load as requested
+      set({ isLoading: true });
+      get().fetchFeed(true);
     } catch (e) {
-      // ignore cache errors
+      set({ isLoading: true });
+      get().fetchFeed(true);
     }
   },
 
