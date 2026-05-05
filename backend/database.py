@@ -4,14 +4,13 @@ from .config import DATABASE_URL, DATABASE_AUTH_TOKEN
 import os
 
 def get_db():
-    conn = libsql.connect(
-        DATABASE_URL,
-        auth_token=DATABASE_AUTH_TOKEN
-    )
+    conn = libsql.connect(DATABASE_URL, auth_token=DATABASE_AUTH_TOKEN)
     return conn
 
 def init_db():
     conn = get_db()
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=10000;")
     
     conn.execute("""
     CREATE TABLE IF NOT EXISTS feed_sources (
@@ -93,6 +92,24 @@ def init_db():
     );
     """)
 
+    # Triggers to keep FTS table in sync
+    conn.execute("""
+    CREATE TRIGGER IF NOT EXISTS articles_ai AFTER INSERT ON articles BEGIN
+      INSERT INTO articles_fts(rowid, title, summary) VALUES (new.id, new.title, new.summary);
+    END;
+    """)
+    conn.execute("""
+    CREATE TRIGGER IF NOT EXISTS articles_ad AFTER DELETE ON articles BEGIN
+      INSERT INTO articles_fts(articles_fts, rowid, title, summary) VALUES('delete', old.id, old.title, old.summary);
+    END;
+    """)
+    conn.execute("""
+    CREATE TRIGGER IF NOT EXISTS articles_au AFTER UPDATE ON articles BEGIN
+      INSERT INTO articles_fts(articles_fts, rowid, title, summary) VALUES('delete', old.id, old.title, old.summary);
+      INSERT INTO articles_fts(rowid, title, summary) VALUES (new.id, new.title, new.summary);
+    END;
+    """)
+
     conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC);")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_url_hash ON articles(url_hash);")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_grouped_published_at ON grouped_stories(published_at DESC);")
@@ -125,5 +142,11 @@ def init_db():
         except Exception as e:
             print(f"Error seeding sources: {e}")
             
+    conn.execute("""
+    INSERT INTO articles_fts(rowid, title, summary) 
+    SELECT id, title, summary FROM articles 
+    WHERE id NOT IN (SELECT rowid FROM articles_fts);
+    """)
+
     conn.commit()
     conn.close()

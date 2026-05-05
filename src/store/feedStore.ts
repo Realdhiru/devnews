@@ -125,16 +125,10 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
       });
       get().saveToCache(fetchedArticles);
     } catch (e: any) {
-      let filteredDemo = DEMO_DATA;
-      const { activeFilter, searchQuery } = get();
-      if (activeFilter) {
-        filteredDemo = filteredDemo.filter(a => a.categories.includes(activeFilter));
+      // Don't clear articles if we have cached data, just report error
+      if (get().articles.length === 0) {
+        set({ articles: [], availableFilters: [] });
       }
-      if (searchQuery) {
-        const lowerSearch = searchQuery.toLowerCase();
-        filteredDemo = filteredDemo.filter(a => a.title.toLowerCase().includes(lowerSearch) || a.summary_short.toLowerCase().includes(lowerSearch));
-      }
-      set({ articles: filteredDemo, availableFilters: ["Web Dev", "Security", "Open Source"] });
       set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
     }
   },

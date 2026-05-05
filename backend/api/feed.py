@@ -1,14 +1,28 @@
 import urllib.parse
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 from backend.database import get_db
 from backend.models import FeedResponse, ArticleCard, ArticleSource
 from backend.cache import TTLCache
 import base64
 import json
 import hashlib
+import re
 
 router = APIRouter()
 cache = TTLCache(300)
+
+# Pre-compiled regex for performance
+JUNK_PATTERNS = [
+    re.compile(r'Article URL:.*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'Comments URL:.*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'Points: \d+.*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'# Comments: \d+.*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'\[link\].*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'\[comments\].*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'https?://\S+', re.IGNORECASE)
+]
+HTML_REGEX = re.compile(r'<[^>]+>')
+WS_REGEX = re.compile(r'\s+')
 
 def encode_cursor(published_at, doc_id):
     raw = f"{published_at}|{doc_id}"
@@ -48,9 +62,10 @@ def get_articles(
                    a.title, a.summary
             FROM grouped_stories g
             JOIN articles a ON g.root_article_id = a.id
+            JOIN articles_fts f ON a.id = f.rowid
         """
-        where_clauses.append("(LOWER(a.title) LIKE ? OR LOWER(COALESCE(a.summary, '')) LIKE ?)")
-        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
+        where_clauses.append("articles_fts MATCH ?")
+        params.append(search)
     else:
         query = """
             SELECT g.id, g.root_article_id, g.published_at, g.primary_category, g.categories, g.source_count,
@@ -77,46 +92,45 @@ def get_articles(
         cursor_db = conn.execute(query, tuple(params))
         rows = cursor_db.fetchall()
         
+        if not rows:
+            return dict(articles=[], next_cursor=None, has_more=False)
+
+        # Optimization: Fetch all sources for these groups in ONE query
+        group_ids = [row[0] for row in rows]
+        placeholders = ",".join(["?"] * len(group_ids))
+        sources_cur = conn.execute(
+            f"SELECT group_id, source_name, source_url, favicon_url FROM article_sources WHERE group_id IN ({placeholders})",
+            tuple(group_ids)
+        )
+        
+        sources_map = {}
+        for s in sources_cur.fetchall():
+            g_id = s[0]
+            if g_id not in sources_map:
+                sources_map[g_id] = []
+            sources_map[g_id].append(ArticleSource(name=s[1], url=s[2], favicon_url=s[3] or ""))
+
         articles = []
         for row in rows:
             g_id = row[0]
             cat_list = json.loads(row[4]) if row[4] else []
-            
-            src_cur = conn.execute("SELECT source_name, source_url, favicon_url FROM article_sources WHERE group_id = ?", (g_id,))
-            sources = [ArticleSource(name=s[0], url=s[1], favicon_url=s[2] or "") for s in src_cur.fetchall()]
+            sources = sources_map.get(g_id, [])
             
             summary = row[7] or ""
-            # Runtime cleanup for messy summaries
-            import re
             
-            # 1. Remove Reddit junk
+            # Runtime cleanup for messy summaries (still needed for existing records)
             if "submitted by /u/" in summary:
-                if " [link] " in summary:
-                    summary = summary.split(" [link] ")[0]
-                if "submitted by /u/" in summary:
-                    summary = summary.split("submitted by /u/")[0]
+                parts = summary.split(" [link] ")
+                summary = parts[0]
+                summary = summary.split("submitted by /u/")[0]
             
-            # 2. Remove Hacker News / RSS metadata junk
-            junk_patterns = [
-                r'Article URL:.*$',
-                r'Comments URL:.*$',
-                r'Points: \d+.*$',
-                r'# Comments: \d+.*$',
-                r'\[link\].*$',
-                r'\[comments\].*$'
-            ]
-            for pattern in junk_patterns:
-                summary = re.sub(pattern, '', summary, flags=re.IGNORECASE | re.MULTILINE)
+            for pattern in JUNK_PATTERNS:
+                summary = pattern.sub('', summary)
             
-            # 3. Clean HTML and URLs
-            summary = re.sub(r'<[^>]+>', '', summary)
-            summary = re.sub(r'https?://\S+', '', summary)
-            
-            # 4. Normalize whitespace
-            summary = re.sub(r'\s+', ' ', summary)
+            summary = HTML_REGEX.sub('', summary)
+            summary = WS_REGEX.sub(' ', summary)
             summary = summary.strip()
             
-            # 5. Cap and fallback
             if len(summary) > 400:
                 summary = summary[:397] + "..."
             
