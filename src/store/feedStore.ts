@@ -13,44 +13,6 @@ interface FeedActions {
   saveToCache: (articles: ArticleCard[]) => void;
 }
 
-const DEMO_DATA: ArticleCard[] = [
-  {
-    id: 1,
-    title: "Understanding React Compiler and the Future of UI Patterns",
-    summary_short: "A deep dive into how the new React Compiler works under the hood and how it optimizes your code automatically.",
-    summary_full: "A deep dive into how the new React Compiler works under the hood and how it optimizes your code automatically without memo or useMemo. We will explore the compilation steps and what it means for the future.",
-    published_at: new Date().toISOString(),
-    source_count: 1,
-    sources: [{ name: "React Blog", url: "#", favicon_url: "" }],
-    categories: ["Web Dev", "React"]
-  },
-  {
-    id: 2,
-    title: "Critical zero-day vulnerability in widely used infrastructure tool",
-    summary_short: "Security researchers have disclosed a new high-severity vulnerability affecting millions of deployed instances.",
-    summary_full: "Security researchers have disclosed a new high-severity vulnerability affecting millions of deployed instances. The bug allows unauthorized RCE if the service is exposed to the internet. Patch immediately.",
-    published_at: new Date(Date.now() - 3600000).toISOString(),
-    source_count: 4,
-    sources: [
-      { name: "KrebsOnSecurity", url: "#", favicon_url: "" },
-      { name: "HackerNews", url: "#", favicon_url: "" }
-    ],
-    categories: ["Security"]
-  },
-  {
-    id: 3,
-    title: "Rust 1.76 brings new language features and performance boosts",
-    summary_short: "The latest Rust release adds important standard library stabilization and improves compile times.",
-    summary_full: "The latest Rust release adds important standard library stabilization and improves compile times. Among the features are improvements to the borrow checker and smaller binary sizes.",
-    published_at: new Date(Date.now() - 7200000).toISOString(),
-    source_count: 2,
-    sources: [
-      { name: "Rust Blog", url: "#", favicon_url: "" }
-    ],
-    categories: ["Open Source", "Tech"]
-  }
-];
-
 export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
   articles: [],
   nextCursor: null,
@@ -125,10 +87,7 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
       });
       get().saveToCache(fetchedArticles);
     } catch (e: any) {
-      // Don't clear articles if we have cached data, just report error
-      if (get().articles.length === 0) {
-        set({ articles: [], availableFilters: [] });
-      }
+      // If network fails, we keep showing whatever is in state (cached or empty)
       set({ isLoading: false, error: e.message || 'Failed to fetch feed' });
     }
   },
@@ -178,32 +137,25 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
 
   loadFromCache: () => {
     try {
-      // Initial cache load for instant visibility
+      // 1. Instantly show cached data if available for zero-wait startup
       const cached = localStorage.getItem('devfeed_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
-        
         if (parsed.feed_data && parsed.feed_data.length > 0) {
-          const UNWANTED_FILTERS = ["React", "Tech", "web dev", "Web Dev", "General", "GitHub Trending"];
           const rawFilters = Array.from(new Set(parsed.feed_data.flatMap((a: ArticleCard) => a.categories))) as string[];
-          const newFilters = rawFilters.filter(f => f && f.length > 0 && !UNWANTED_FILTERS.includes(f)).sort();
+          const newFilters = rawFilters.filter(f => f && f !== "Other").sort();
           
-          const cleanCached = (parsed.feed_data as ArticleCard[]).filter(a => 
-            !a.categories.some(c => c === "GitHub Trending") && 
-            a.source_name !== "GitHub Trending"
-          );
-
           set({
-            articles: cleanCached,
+            articles: parsed.feed_data,
             isCached: true,
             cachedAt: parsed.timestamp || null,
             availableFilters: newFilters,
+            isLoading: false // Optimization: Hide skeletons if we have cache
           });
         }
       }
 
-      // Important: Always refresh from network on page load as requested
-      set({ isLoading: true });
+      // 2. ALWAYS trigger fresh fetch immediately
       get().fetchFeed(true);
     } catch (e) {
       set({ isLoading: true });

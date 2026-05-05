@@ -13,10 +13,10 @@ cache = TTLCache(300)
 
 # Pre-compiled regex for performance
 JUNK_PATTERNS = [
-    re.compile(r'Article URL:.*$', re.IGNORECASE | re.MULTILINE),
-    re.compile(r'Comments URL:.*$', re.IGNORECASE | re.MULTILINE),
-    re.compile(r'Points: \d+.*$', re.IGNORECASE | re.MULTILINE),
-    re.compile(r'# Comments: \d+.*$', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'Article URL:.*?(?=Comments URL:|$)', re.IGNORECASE | re.DOTALL),
+    re.compile(r'Comments URL:.*?(?=Points:|$)', re.IGNORECASE | re.DOTALL),
+    re.compile(r'Points: \d+.*?(?=# Comments:|$)', re.IGNORECASE | re.DOTALL),
+    re.compile(r'# Comments: \d+.*', re.IGNORECASE | re.DOTALL),
     re.compile(r'\[link\].*$', re.IGNORECASE | re.MULTILINE),
     re.compile(r'\[comments\].*$', re.IGNORECASE | re.MULTILINE),
     re.compile(r'https?://\S+', re.IGNORECASE)
