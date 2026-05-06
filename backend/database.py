@@ -9,8 +9,6 @@ def get_db():
 
 def init_db():
     conn = get_db()
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA busy_timeout=10000;")
     
     conn.execute("""
     CREATE TABLE IF NOT EXISTS feed_sources (
